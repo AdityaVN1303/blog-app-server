@@ -117,7 +117,7 @@ app.post('/login' , async (req , res)=>{
             if (pass) {
                 const token = jwt.sign({username : user.username , id : user._id} , process.env.JWT_KEY);
                 res.cookie('token', token , {
-                    sameSite : 'none'
+                    sameSite : 'lax'
                 }).status(200).json({loggedIn : true , id : user._id});
 
             } else {
