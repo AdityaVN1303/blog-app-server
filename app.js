@@ -116,7 +116,9 @@ app.post('/login' , async (req , res)=>{
             const pass = await bcrypt.compare(password , user.password);
             if (pass) {
                 const token = jwt.sign({username : user.username , id : user._id} , process.env.JWT_KEY);
-                res.cookie('token', token).status(200).json({loggedIn : true , id : user._id});
+                res.cookie('token', token , {
+                    sameSite : 'none'
+                }).status(200).json({loggedIn : true , id : user._id});
 
             } else {
                 res.status(200).json({error : "Invalid Password"});
@@ -152,26 +154,6 @@ app.get('/user/:id' , async (req, res)=>{
                 res.status(400).json({error});
             }
 })
-
-// app.get('/profile' , async (req , res)=>{
-//     try {
-//         const {token} = req.cookies;
-//         if(token){
-//             jwt.verify(token , process.env.JWT_KEY , {} , (err , info)=>{
-//                 if(err){
-//                     throw "Wrong Token ! Access Denied"
-//                 }
-//                 res.status(200).json(info);
-//             });
-//         }
-//         else{
-//             res.status(400).json({error : "Unauthorized !!!"})
-//         }
-//     } catch (error) {
-//         res.status(400).json({error});
-//     }
-    
-// })
 
 app.post('/logout' , async (req , res)=>{
     res.cookie('token' , '').status(200).json({message : "Logged Out Successfully"});
