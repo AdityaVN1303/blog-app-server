@@ -27,7 +27,7 @@ const incrementViewCount = async (req, res, next) => {
     const { id } = req.params; // Extract post ID from request parameters
 
     try {
-        const post = await Post.findByIdAndUpdate(id, { $inc: { viewCount: 0.5 } }, { new: true }); // Update and return modified document
+        const post = await Post.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }, { new: true }); // Update and return modified document
 
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
