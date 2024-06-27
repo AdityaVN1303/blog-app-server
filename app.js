@@ -117,8 +117,11 @@ app.post('/login' , async (req , res)=>{
             if (pass) {
                 const token = jwt.sign({username : user.username , id : user._id} , process.env.JWT_KEY);
                 res.cookie('token', token , {
-                    sameSite : 'lax'
-                }).status(200).json({loggedIn : true , id : user._id});
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'None'
+                }
+            ).status(200).json({loggedIn : true , id : user._id});
 
             } else {
                 res.status(200).json({error : "Invalid Password"});
