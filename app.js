@@ -14,7 +14,7 @@ const User = require('./models/User');
 const Post = require('./models/Post');
 
 const app = express();
-app.use(cors({credentials : true , origin : 'https://blog-app-client-sage.vercel.app/'}));
+app.use(cors({credentials : true , origin : 'https://blog-app-client-sage.vercel.app'}));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads' , express.static(__dirname + '/uploads'));
