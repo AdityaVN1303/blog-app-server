@@ -89,33 +89,46 @@ app.post('/register' , async (req , res)=>{
     }
 })
 
-app.post('/post' , upload.single('file') , async (req , res)=>{
+const uploadPost = upload.single('file');
+app.post('/post' , async (req , res)=>{
+    try {
+        uploadPost(req, res, async function(err) {
 
-    const {title , description , essay , tag} = req.body;
-    const {originalname , path} = req.file;
-    const parts = originalname.split('.');
-    const ext = parts[parts.length-1];
-    const newPath = path + '.' + ext;
-    fs.renameSync(path , newPath);
+            if (err instanceof multer.MulterError) {
+    
+                if(err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({error : "Upload Image less than 100kb"})
+    
+            } else if (err) {
+               return res.status(400).json({error : err});
+            }
+        const {title , description , essay , tag} = req.body;
+        const imageFile = req.file
+    
+        const {token} = req.cookies;
+            if(token){
+                jwt.verify(token , process.env.JWT_KEY , {} , async (err , info)=>{
+                    if(err){
+                        res.status(400).json({error : "Unauthorized !!!"})
+                    }
 
-    const {token} = req.cookies;
-        if(token){
-            jwt.verify(token , process.env.JWT_KEY , {} , async (err , info)=>{
-                if(err){
-                    res.status(400).json({error : "Unauthorized !!!"})
-                }
-
-                const postDoc = await Post.create({
-                    title , 
-                    description , 
-                    cover : newPath , 
-                    essay,
-                    tag ,
-                    author : info.id
-                })
-                res.json(postDoc);
-            });
-        }
+                    const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: "image" });
+    
+                    const postDoc = await Post.create({
+                        title , 
+                        description , 
+                        cover : imageUpload.secure_url , 
+                        essay,
+                        tag ,
+                        author : info.id
+                    })
+                    res.json(postDoc);
+                });
+            }
+        })
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({error : error});
+    }
 
 })
 
@@ -179,72 +192,92 @@ app.get('/post' , async (req , res)=>{
     
 })
 
-app.put('/post' , upload.single('file') , async (req , res)=>{
+const updatePostImg= upload.single('file');
+app.put('/post' , async (req , res)=>{
+    try {
+        updatePostImg(req, res, async function(err) {
 
-    let newPath = null
-    if(req.file){
-        const {originalname , path} = req.file;
-        const parts = originalname.split('.');
-        const ext = parts[parts.length-1];
-        newPath = path + '.' + ext;
-        fs.renameSync(path , newPath);
+            if (err instanceof multer.MulterError) {
+    
+                if(err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({error : "Upload Image less than 100kb"})
+    
+            } else if (err) {
+               return res.status(400).json({error : err});
+            }
+    
+        const {title , description , essay , id , tag} = req.body;
+        const imageFile = req.file;
+        const {token} = req.cookies;
+            if(token){
+                jwt.verify(token , process.env.JWT_KEY , {} , async (err , info)=>{
+                    if(err){
+                        res.status(400).json({error : "Unauthorized !!!"})
+                    }
+                    // console.log(postDoc);
+
+                    const postDoc = await Post.findById(id);
+                    const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id)
+    
+                    if (!isAuthor) {
+                        res.status(400).json({error : "Only Author can edit his/her Post"});
+                    }
+
+                    if(imageFile){
+                        await cloudinary.uploader.destroy(postDoc.cover.split("/").pop().split(".")[0]);
+                    }
+                    const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: "image" });
+    
+                    const response = await postDoc.updateOne({
+                        title , 
+                        description , 
+                        essay,
+                        tag ,
+                        cover : imageFile ? imageUpload.secure_url : postDoc.cover, 
+                        author : info.id 
+                    })
+                    res.json(response);
+                });
+            }
+        })
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({error : error});
     }
-
-    const {title , description , essay , id , tag} = req.body;
-    const {token} = req.cookies;
-        if(token){
-            jwt.verify(token , process.env.JWT_KEY , {} , async (err , info)=>{
-                if(err){
-                    res.status(400).json({error : "Unauthorized !!!"})
-                }
-
-                const postDoc = await Post.findById(id);
-                // console.log(postDoc);
-
-                const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id)
-
-                if (!isAuthor) {
-                    res.status(400).json({error : "Only Author can edit his/her Post"});
-                }
-
-                const response = await postDoc.updateOne({
-                    title , 
-                    description , 
-                    essay,
-                    tag ,
-                    cover : newPath? newPath : postDoc.cover, 
-                    author : info.id 
-                })
-                res.json(response);
-            });
-        }
-
 })
 
-app.put('/register/:id' , upload.single('file') , async (req , res)=>{
+const updateUserImg = upload.single('file')
+app.put('/register/:id' , async (req , res)=>{
     try {
+
+        updateUserImg(req, res, async function(err) {
+
+            if (err instanceof multer.MulterError) {
+    
+                if(err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({error : "Upload Image less than 100kb"})
+    
+            } else if (err) {
+               return res.status(400).json({error : err});
+            }
+
         const {id} = req.params;
-        console.log(id);
         const {username} = req.body;
-        let newPath = null
-    if(req.file){
-        const {originalname , path} = req.file;
-        const parts = originalname.split('.');
-        const ext = parts[parts.length-1];
-        newPath = path + '.' + ext;
-        fs.renameSync(path , newPath);
-    }
+        const imageFile = req.file;
 
         let user = await User.findById(id).select('-password');
-        console.log(user);
+
+    if(imageFile){
+        await cloudinary.uploader.destroy(user.image.split("/").pop().split(".")[0]);
+    }
+
+    const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: "image" });
 
             const postDoc = await user.updateOne({
                 username ,
-                image : newPath? newPath : user.image
+                image : imageFile ? imageUpload.secure_url : user.image, 
             })
             console.log(postDoc);
             res.status(200).json(postDoc);
-        
+        })
     } catch (error) {
         res.status(400).json({error : error , status : 400});
     }
