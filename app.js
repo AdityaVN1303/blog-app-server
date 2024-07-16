@@ -224,15 +224,16 @@ app.put('/post' , async (req , res)=>{
 
                     if(imageFile){
                         await cloudinary.uploader.destroy(postDoc.cover.split("/").pop().split(".")[0]);
+                        const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: "image" });
+                        imageFile = imageUpload.secure_url;
                     }
-                    const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: "image" });
     
                     const response = await postDoc.updateOne({
                         title , 
                         description , 
                         essay,
                         tag ,
-                        cover : imageFile ? imageUpload.secure_url : postDoc.cover, 
+                        cover : imageFile ? imageFile : postDoc.cover, 
                         author : info.id 
                     })
                     res.json(response);
@@ -267,13 +268,14 @@ app.put('/register/:id' , async (req , res)=>{
 
     if(imageFile){
         await cloudinary.uploader.destroy(user.image.split("/").pop().split(".")[0]);
+        const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: "image" });
+        imageFile = imageUpload.secure_url;
     }
 
-    const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: "image" });
 
             const postDoc = await user.updateOne({
                 username ,
-                image : imageFile ? imageUpload.secure_url : user.image, 
+                image : imageFile ? imageFile : user.image, 
             })
             console.log(postDoc);
             res.status(200).json(postDoc);
