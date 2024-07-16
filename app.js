@@ -16,7 +16,7 @@ const User = require('./models/User');
 const Post = require('./models/Post');
 
 const app = express();
-app.use(cors({credentials : true , origin : 'http://localhost:3000'}));
+app.use(cors({credentials : true , origin : 'https://blog-app-client-sage.vercel.app'}));
 app.use(express.json());
 app.use(cookieParser());
 
