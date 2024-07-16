@@ -2,23 +2,25 @@ require('dotenv').config();
 const express = require('express')
 const cors = require('cors');
 const mongoose = require('mongoose');
+const connectCloudinary = require("./cloudinary");
 const emailValidator = require('email-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const upload = require('./multer');
 const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
 
 const User = require('./models/User');
 const Post = require('./models/Post');
 
 const app = express();
-app.use(cors({credentials : true , origin : 'https://blog-app-client-sage.vercel.app'}));
+app.use(cors({credentials : true , origin : 'http://localhost:3000'}));
 app.use(express.json());
 app.use(cookieParser());
-app.use('/uploads' , express.static(__dirname + '/uploads'));
 
+connectCloudinary();
 const connectDb = require('./dbConn');
 
 // MiddleWare Code
@@ -42,15 +44,21 @@ const incrementViewCount = async (req, res, next) => {
 // End
 
 
-
-app.post('/register' , upload.single('file') , async (req , res)=>{
+const uploadImg = upload.single('file');
+app.post('/register' , async (req , res)=>{
     try {
+
+        uploadImg(req, res, async function(err) {
+
+            if (err instanceof multer.MulterError) {
+    
+                if(err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({error : "Upload Image less than 100kb"})
+    
+            } else if (err) {
+               return res.status(400).json({error : err});
+            }
         const {username , email , password} = req.body;
-        const {originalname , path} = req.file;
-        const parts = originalname.split('.');
-        const ext = parts[parts.length-1];
-        const newPath = path + '.' + ext;
-        fs.renameSync(path , newPath);
+        const imageFile = req.file;
 
 
         let user = await User.findOne({email : req.body.email}).select('-password');
@@ -64,15 +72,18 @@ app.post('/register' , upload.single('file') , async (req , res)=>{
             if(!emailValidator.validate(req.body.email)){throw "Enter a Valid Email Address"};
             const hashedPassword = await bcrypt.hash(password , 10);
 
+            const imageUpload = await cloudinary.uploader.upload(imageFile.path, { resource_type: "image" });
+
             const postDoc = await User.create({
                 username ,
                 email ,
                 password : hashedPassword ,
-                image : newPath
+                image : imageUpload.secure_url
             })
             console.log(postDoc);
             res.status(200).json(postDoc);
         }
+    })
     } catch (error) {
         res.status(400).json({error : error , status : 400});
     }
